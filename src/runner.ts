@@ -1,4 +1,5 @@
 import { day01Part1, day01Part2 } from "./day01";
+import { day02Part1, day02Part2 } from "./day02";
 
 const run = ({
   dayNum,
@@ -7,8 +8,8 @@ const run = ({
   shouldSkip,
 }: {
   dayNum: number;
-  part1Function: () => void;
-  part2Function?: () => void;
+  part1Function: () => string | number | null;
+  part2Function?: () => string | number | null;
   shouldSkip?: boolean;
 }) => {
   const title = `Day ${String(dayNum).padStart(2, "0")}`;
@@ -29,4 +30,11 @@ run({
   dayNum: 1,
   part1Function: day01Part1,
   part2Function: day01Part2,
+  shouldSkip: false,
+});
+
+run({
+  dayNum: 2,
+  part1Function: day02Part1,
+  part2Function: day02Part2,
 });
