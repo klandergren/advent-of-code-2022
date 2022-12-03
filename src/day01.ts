@@ -9,7 +9,6 @@ export const day01Part1 = () => {
     .map((backpack) =>
       chainFrom(backpack.split("\n"))
         .map((x) => Number.parseInt(x))
-        .filter((x) => !isNaN(x))
         .reduce((acc, x) => {
           return acc + x;
         }, 0)
@@ -25,7 +24,6 @@ export const day01Part2 = () => {
       .map((backpack) =>
         chainFrom(backpack.split("\n"))
           .map((x) => Number.parseInt(x))
-          .filter((x) => !isNaN(x))
           .reduce((acc, x) => {
             return acc + x;
           }, 0)
