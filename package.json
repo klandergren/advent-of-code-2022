@@ -2,7 +2,7 @@
   "name": "advent-of-code-2022",
   "version": "0.0.1",
   "description": "Solutions to Advent of Code 2022",
-  "main": "./_build/runner.js",
+  "main": "./_build/hohoho.js",
   "scripts": {
     "build": "tsc",
     "build-cont": "tsc --watch",
