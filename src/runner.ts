@@ -1,6 +1,7 @@
 import { day01Part1, day01Part2 } from "./day01";
 import { day02Part1, day02Part2 } from "./day02";
 import { day03Part1, day03Part2 } from "./day03";
+import { day04Part1, day04Part2 } from "./day04";
 
 const run = ({
   dayNum,
@@ -45,4 +46,11 @@ run({
   dayNum: 3,
   part1Function: day03Part1,
   part2Function: day03Part2,
+  shouldSkip: true,
+});
+
+run({
+  dayNum: 4,
+  part1Function: day04Part1,
+  part2Function: day04Part2,
 });
