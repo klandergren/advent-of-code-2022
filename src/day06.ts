@@ -1,5 +1,3 @@
-import { chainFrom } from "transducist";
-
 import { read } from "./util";
 
 const dataFilePath = "data/day06-prod.txt";
