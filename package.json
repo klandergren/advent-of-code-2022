@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc",
     "build-cont": "tsc --watch",
-    "run-cont": "nodemon --watch ./_build/",
+    "run-cont": "nodemon --watch ./_build/ --watch ./data/ --ext js,txt",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
