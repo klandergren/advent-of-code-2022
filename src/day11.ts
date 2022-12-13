@@ -120,12 +120,13 @@ const prodMonkeyBarrel = () => {
 const calculateMonkeyBusiness = (
   rounds: number,
   monkeyBarrel: Monkey[],
-  boredom: (worryLevel: number, modAmount: number) => number
+  boredom: (worryLevel: number, modAmounts: number[]) => number
 ) => {
   const monkeyCount = [...Array(monkeyBarrel.length).keys()].map((_) => 0);
 
   for (let roundNumber = 1; roundNumber <= rounds; roundNumber++) {
     let monkeyIndex = 0;
+    const modAmounts = monkeyBarrel.map((m) => m.modAmount);
     for (const monkey of monkeyBarrel) {
       /* inspect each item */
       let count = 0;
@@ -134,7 +135,7 @@ const calculateMonkeyBusiness = (
         let worryLevel = monkey.operation(item);
 
         /* boredom */
-        worryLevel = boredom(worryLevel, monkey.modAmount);
+        worryLevel = boredom(worryLevel, modAmounts);
 
         /* test */
         if (worryLevel % monkey.modAmount === 0) {
@@ -152,8 +153,6 @@ const calculateMonkeyBusiness = (
   }
 
   console.log("round:", rounds, "monkeyCount:", monkeyCount);
-
-  console.log(monkeyBarrel);
 
   monkeyCount.sort((a, b) => {
     return b - a; /* sort desc */
@@ -173,16 +172,19 @@ export const day11Part1 = () => {
 };
 
 export const day11Part2 = () => {
-  /* need to normalize worry level such that: test(x) and test(normalize(x)) are the same */
-  /* and somehow make it such that x and normalize(x) have the same effect on all other tests? */
-  /* need boredom such that remainder(test(operation(x))) is the same across values of x  */
-
-  const boredom = (worryLevel: number, modAmount: number) => {
+  const boredom = (worryLevel: number, modAmounts: number[]) => {
     /* need function `norm` such that op_i(norm(w)) % mod_i === op_i(w) % mod_i for each monkey i */
 
-    const remainder = worryLevel % modAmount;
-    return remainder;
+    /* (2 days later...) talked with dphilipson at climbing and learned about
+    modulo arithmetic. the product of all mod amounts gives us a common
+    factor. when that common factor is used on worry level w_i, the remainder
+    r_i has the property such that: */
+
+    /* w_i % mod_i = (w_i % common_factor) % mod_i */
+
+    /* which effectively ensures that w_i never gets larger than cf */
+    return worryLevel % modAmounts.reduce((acc, x) => acc * x, 1);
   };
 
-  return calculateMonkeyBusiness(20, testMonkeyBarrel(), boredom);
+  return calculateMonkeyBusiness(10000, prodMonkeyBarrel(), boredom);
 };
