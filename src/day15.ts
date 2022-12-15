@@ -15,33 +15,50 @@ type Reading = {
   covered?: Coordinate[];
 };
 
+const containedWithin = (r: Reading, testCoord: Coordinate) => {
+  const mTest = manhattanDistance(r.sensor, testCoord);
+
+  if (
+    mTest <= r.manhattanDistance ||
+    JSON.stringify(testCoord) === JSON.stringify(r.sensor) ||
+    JSON.stringify(testCoord) === JSON.stringify(r.closestBeacon)
+  ) {
+    return true;
+  }
+
+  return false;
+};
+
+const nextCoordToEastWithFixedY = (
+  fromReading: Reading,
+  testCoord: Coordinate
+) => {
+  if (!containedWithin(fromReading, testCoord)) {
+    return undefined;
+  }
+
+  /* we are stuck with this much y direction */
+  const verticalM = Math.abs(testCoord.y - fromReading.sensor.y);
+
+  /* xtranslation */
+  const horizontalM = fromReading.manhattanDistance - verticalM;
+
+  const nextCoord = {
+    x:
+      fromReading.sensor.x +
+      horizontalM +
+      1 /* add 1 to be outside the range */,
+    y: testCoord.y,
+  };
+
+  return nextCoord;
+};
+
 const manhattanDistance = (c1: Coordinate, c2: Coordinate) => {
   const d1 = Math.abs(c2.x - c1.x);
   const d2 = Math.abs(c2.y - c1.y);
 
   return d1 + d2;
-};
-
-const enumerateCoordinates = (coord: Coordinate, mDistance: number) => {
-  const minX = coord.x - mDistance;
-  const maxX = coord.x + mDistance;
-
-  const minY = coord.y - mDistance;
-  const maxY = coord.y + mDistance;
-
-  const coords = [];
-  for (let x = minX; x <= maxX; x++) {
-    for (let y = minY; y <= maxY; y++) {
-      const candidate = { x: x, y: y };
-      const distance = manhattanDistance(candidate, coord);
-
-      if (distance <= mDistance) {
-        coords.push(candidate);
-      }
-    }
-  }
-
-  return coords;
 };
 
 const parseInput = ({ filePath }: { filePath: string }) => {
@@ -95,70 +112,6 @@ class Cave {
     this.offsetY = 0;
   }
 
-  createOld() {
-    const bounds: Bounds = this.readings
-      .flatMap((reading) => {
-        const mDistance = manhattanDistance(
-          reading.sensor,
-          reading.closestBeacon
-        );
-
-        return [
-          reading.sensor,
-          reading.closestBeacon,
-          {
-            x: reading.sensor.x,
-            y: reading.sensor.y - mDistance,
-          },
-          {
-            x: reading.sensor.x,
-            y: reading.sensor.y + mDistance,
-          },
-          {
-            x: reading.sensor.x - mDistance,
-            y: reading.sensor.y,
-          },
-          {
-            x: reading.sensor.x + mDistance,
-            y: reading.sensor.y,
-          },
-        ];
-      })
-      .reduce(
-        (bounds, c) => {
-          bounds.minX = c.x < bounds.minX ? c.x : bounds.minX;
-          bounds.maxX = bounds.maxX < c.x ? c.x : bounds.maxX;
-          bounds.minY = c.y < bounds.minY ? c.y : bounds.minY;
-          bounds.maxY = bounds.maxY < c.y ? c.y : bounds.maxY;
-
-          return bounds;
-        },
-        {
-          minX: Number.MAX_SAFE_INTEGER,
-          maxX: Number.MIN_SAFE_INTEGER,
-          minY: Number.MAX_SAFE_INTEGER,
-          maxY: Number.MIN_SAFE_INTEGER,
-        }
-      );
-
-    this.offsetX = bounds.minX;
-    this.offsetY = bounds.minY;
-
-    for (let y = 0; y <= bounds.maxY - this.offsetY; y++) {
-      const row = [...Array(bounds.maxX - this.offsetX + 1).keys()].map(
-        (_) => "."
-      );
-      this.grid[y] = row;
-    }
-
-    for (const { sensor, closestBeacon } of this.readings) {
-      this.grid[sensor.y - this.offsetY][sensor.x - this.offsetX] = "S";
-      this.grid[closestBeacon.y - this.offsetY][
-        closestBeacon.x - this.offsetX
-      ] = "B";
-    }
-  }
-
   create() {
     this.bounds = this.readings
       .flatMap((reading) => {
@@ -209,15 +162,9 @@ class Cave {
     this.offsetY = this.bounds.minY;
   }
 
-  render() {
-    let y = 0;
-    for (const row of this.grid) {
-      console.log(String(y).padStart(2, "0"), row.join(""));
-      y++;
-    }
-  }
-
   noBeaconPositions(y: number) {
+    /* generate a list of test coordinates from the x bounds of our board with
+    the fixed y */
     const testCoords = [];
     for (let x = this.bounds.minX; x <= this.bounds.maxX; x++) {
       testCoords.push({
@@ -228,6 +175,7 @@ class Cave {
 
     return chainFrom(testCoords)
       .filter((testCoord) => {
+        /* return true if the testCoord falls within a reading. a beacon could not be here */
         return !!chainFrom(this.readings)
           .filter((r) => {
             const mTest = manhattanDistance(r.sensor, testCoord);
@@ -244,32 +192,47 @@ class Cave {
   }
 
   findBeacon(max: number) {
-    for (let x = 0; x <= max; x++) {
-      for (let y = 0; y <= max; y++) {
-        const test = { x: x, y: y };
+    let y = 0;
 
-        if (this._canContainBeacon(test)) {
-          return test.x * 4000000 + test.y;
+    let testCoord = { x: 0, y: y };
+    let prevTestCoord = { x: testCoord.x, y: testCoord.y };
+
+    /* the idea here is to increment y and advance x by jumping to the edge + 1
+    of any intersecting sesson. stop when you have read through the readings
+    and confirmed there is no match. */
+    while (y <= max) {
+      /* search through readings */
+      for (const r of this.readings) {
+        const maybeCoord = nextCoordToEastWithFixedY(r, testCoord);
+
+        if (maybeCoord === undefined) {
+          /* do nothing: this reading does not contain */
+          continue;
         }
+
+        if (maybeCoord.x < testCoord.x) {
+          /* we got caught in a reading further west */
+          continue;
+        }
+
+        testCoord = maybeCoord;
+        break;
+      }
+
+      /* we are out of the zone */
+      if (max <= testCoord.x) {
+        y++;
+        testCoord = { x: 0, y: y };
+      } else if (JSON.stringify(testCoord) === JSON.stringify(prevTestCoord)) {
+        /* we have not advanced and found our candidate */
+        break;
+      } else {
+        /* we have advanced. go through readings again */
+        prevTestCoord = { x: testCoord.x, y: testCoord.y };
       }
     }
 
-    return -1;
-  }
-
-  _canContainBeacon(testCoord: Coordinate) {
-    for (const r of this.readings) {
-      const mTest = manhattanDistance(r.sensor, testCoord);
-
-      if (
-        mTest <= r.manhattanDistance ||
-        JSON.stringify(testCoord) === JSON.stringify(r.sensor) ||
-        JSON.stringify(testCoord) === JSON.stringify(r.closestBeacon)
-      ) {
-        return false;
-      }
-    }
-    return true;
+    return testCoord.x * 4000000 + testCoord.y;
   }
 }
 
@@ -278,22 +241,19 @@ export const day15Part1 = () => {
 
   const cave = new Cave({ readings: readings });
   cave.create();
-  /*   return cave.noBeaconPositions(2000000); */
+  /* note: this should be rewritten to make use of manhattan distance to
+  eliminate candidates */
+  return cave.noBeaconPositions(2000000);
   /*   return cave.noBeaconPositions(10); */
-  return -1;
 };
 
 export const day15Part2 = () => {
-  /* note: I feel like there is probably some clue from part 1 which is if you
-  can determine an efficient way of finding where the beacon could _not_ be,
-  that will allow you to filter out candidates to find where it could be. paths
-  I am thinking are involve using the edge bounds of the manhattan distance
-  diamonds to eliminate candidates */
   const readings = parseInput({ filePath: dataFilePath });
 
   const cave = new Cave({ readings: readings });
   cave.create();
-  return -1;
-  /*   return cave.findBeacon(4000000); */
-  /*   return cave.findBeacon(20); */
+  /* note: this still runs very slowly. not sure at the moment how to best
+  reduce the search space */
+  return cave.findBeacon(4000000);
+  /*     return cave.findBeacon(20); */
 };
