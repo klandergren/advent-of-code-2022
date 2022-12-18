@@ -165,5 +165,4 @@ run({
   dayNum: 18,
   part1Function: day18Part1,
   part2Function: day18Part2,
-  shouldSkip: true,
 });
