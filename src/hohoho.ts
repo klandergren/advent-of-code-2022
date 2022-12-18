@@ -13,6 +13,9 @@ import { day12Part1, day12Part2 } from "./day12";
 import { day13Part1, day13Part2 } from "./day13";
 import { day14Part1, day14Part2 } from "./day14";
 import { day15Part1, day15Part2 } from "./day15";
+import { day16Part1, day16Part2 } from "./day16";
+import { day17Part1, day17Part2 } from "./day17";
+import { day18Part1, day18Part2 } from "./day18";
 
 const run = ({
   dayNum,
@@ -141,4 +144,26 @@ run({
   dayNum: 15,
   part1Function: day15Part1,
   part2Function: day15Part2,
+  shouldSkip: true,
+});
+
+run({
+  dayNum: 16,
+  part1Function: day16Part1,
+  part2Function: day16Part2,
+  shouldSkip: true,
+});
+
+run({
+  dayNum: 17,
+  part1Function: day17Part1,
+  part2Function: day17Part2,
+  shouldSkip: true,
+});
+
+run({
+  dayNum: 18,
+  part1Function: day18Part1,
+  part2Function: day18Part2,
+  shouldSkip: true,
 });
