@@ -77,6 +77,16 @@ class Chamber {
 
   offset: number;
 
+  /* there may be cycles within the data, so we need to ensure we read the
+  entire jet input at least once before we make assumptions about repeats */
+  minJetsToRead: number;
+  jetsRead: number;
+
+  records: number[];
+  snapshots: string[];
+
+  towerHeight: number;
+
   /* undefined: off grid */
   /* . open */
   /* # stopped shape */
@@ -105,6 +115,14 @@ class Chamber {
     this.fallingShapeCoordinate = { x: 2, y: 3 };
 
     this.offset = 0;
+
+    this.minJetsToRead = read(dataFilePath).length;
+    this.jetsRead = 0;
+
+    this.records = [0];
+    this.snapshots = [""];
+
+    this.towerHeight = 0;
   }
 
   advance() {
@@ -123,6 +141,7 @@ class Chamber {
       default:
         throw new Error("huh");
     }
+    this.jetsRead += 1;
 
     const canMoveTo = (coordinate: Coordinate) => {
       let canMove = true;
@@ -201,9 +220,80 @@ class Chamber {
     }
   }
 
+  advanceOneRock() {
+    const start = this.numberOfStoppedShapes;
+
+    while (this.numberOfStoppedShapes < start + 1) {
+      this.advance();
+    }
+
+    this.records.push(this.answer());
+  }
+
   advanceUntil(numberOfRocks: number) {
     while (this.numberOfStoppedShapes < numberOfRocks) {
-      this.advance();
+      this.advanceOneRock();
+
+      const snap = this.snapshot();
+      if (
+        this.minJetsToRead < this.jetsRead &&
+        new Set(this.snapshots).has(snap)
+      ) {
+        /* we started to repeat and have read all jet data at least once */
+
+        /* find where the corresponding snapshot was first seen */
+        const indexOfFirstOccurrence = this.snapshots.findIndex((el) => {
+          return el === snap;
+        });
+
+        /* what was our height before we started to repeat? */
+        const baseline = this.records[indexOfFirstOccurrence - 1];
+
+        /* calculate the length of the repeat interval */
+        const intervalLength = this.records.length - 1 - indexOfFirstOccurrence;
+
+        /* we have just detected a repeat, so the last value in `this.records`
+        is the _first_ entry in a new interval, so go back one more than
+        that. */
+        const gainsPerInterval =
+          this.records[this.records.length - 2] -
+          this.records[indexOfFirstOccurrence - 1];
+
+        const rocksRemaining = numberOfRocks - indexOfFirstOccurrence;
+
+        const quotient = Math.floor(rocksRemaining / intervalLength);
+
+        const remainder = rocksRemaining % intervalLength;
+
+        /* the height we gain by advancing `remainder` number of steps past the
+        end of the last interval */
+        const remainderGains =
+          this.records[indexOfFirstOccurrence + remainder] -
+          this.records[indexOfFirstOccurrence - 1];
+
+        console.log("");
+        console.log("=========================");
+        console.log("minJetsToRead", this.minJetsToRead);
+        console.log("jetsRead", this.jetsRead);
+        console.log("numberOfRocks", numberOfRocks);
+        console.log("numberOfStoppedShapes", this.numberOfStoppedShapes);
+        console.log("snapshots.length", this.snapshots.length);
+        console.log("records.length", this.records.length);
+        console.log("indexOfFirstOccurrence", indexOfFirstOccurrence);
+        console.log("baseline", baseline);
+        console.log("intervalLength", intervalLength);
+        console.log("gainsPerInterval", gainsPerInterval);
+        console.log("rocksRemaining", rocksRemaining);
+        console.log("quotient", quotient);
+        console.log("remainder", remainder);
+        console.log("remainderGains", remainderGains);
+
+        this.towerHeight =
+          baseline + gainsPerInterval * quotient + remainderGains;
+        break;
+      } else {
+        this.snapshots.push(snap);
+      }
     }
   }
 
@@ -293,15 +383,24 @@ class Chamber {
   answer() {
     return this.highestYRock() + this.offset;
   }
+
+  snapshot() {
+    return JSON.stringify({
+      grid: this.grid,
+      fs: this.fallingShape,
+      fsc: this.fallingShapeCoordinate,
+    });
+  }
 }
 
 export const day17Part1 = () => {
   const chamber = new Chamber();
   chamber.advanceUntil(2022);
-  chamber.render();
-  return chamber.answer();
+  return chamber.towerHeight;
 };
 
 export const day17Part2 = () => {
-  return -1;
+  const chamber = new Chamber();
+  chamber.advanceUntil(1000000000000);
+  return chamber.towerHeight;
 };
