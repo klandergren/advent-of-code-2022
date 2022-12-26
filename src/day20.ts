@@ -11,7 +11,7 @@ type MovableNumber = {
   hasMoved: boolean;
 };
 
-class CircularBuffer {
+export class CircularBuffer {
   backingArray: MovableNumber[];
 
   constructor(initialArray: number[]) {
@@ -122,6 +122,10 @@ class CircularBuffer {
       "retreat after:",
       this.backingArray.map((x) => x.value).join(", ")
     );
+  }
+
+  asValueArray() {
+    return this.backingArray.map((x) => x.value);
   }
 }
 
